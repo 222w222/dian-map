@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2020年全国地方性氟中毒分布地图</title>
+    <style>
+        *{margin: 0;padding: 0;box-sizing: border-box;}
+        body{background: #f5f7fa;font-family: "微软雅黑",sans-serif;}
+        .header{
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+        }
+        h1{color: #2c3e50;font-size: 24px;margin-bottom: 10px;}
+        .desc{color: #666;margin-bottom: 15px;}
+        .btn-box{margin-bottom: 10px;}
+        button{
+            padding: 8px 20px;
+            border: none;
+            background: #3498db;
+            color: #fff;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        button.active{background: #e74c3c;}
+        #map-box{
+            width: 98%;
+            height: 75vh;
+            margin: 0 auto;
+            background: #fff;
+        }
+        .total-data{
+            text-align: center;
+            padding: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>2020年底全国地方性氟中毒分布专题地图</h1>
+        <p class="desc">数据来源：2020年全国地方病防治统计数据</p>
+        <div class="btn-box">
+            <button class="active" id="btn1">饮水型氟中毒</button>
+            <button id="btn2">燃煤污染型氟中毒</button>
+        </div>
+    </div>
+    <div id="map-box"></div>
+    <div class="total-data" id="totalInfo">
+        【饮水型】全国病区县：1041个 | 已控制县：953个 | 氟斑牙患者：29.9万人 | 氟骨症患者：6.8万人
+    </div>
+
+    <!-- 引入ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入全国省级地图 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts/map/js/china.js"></script>
+
+    <script>
+        // 1. 初始化地图容器
+        const myChart = echarts.init(document.getElementById('map-box'));
+        let currentType = 1; // 1饮水型 2燃煤型
+
+        // 2. 分省模拟数据（贴合全国总量，可自行修改）
+        // 饮水型氟中毒 - 各省病区县数量
+        const dataDrink = [
+            {name:'河北',value:86},{name:'山西',value:72},{name:'内蒙古',value:95},
+            {name:'辽宁',value:41},{name:'吉林',value:33},{name:'黑龙江',value:28},
+            {name:'江苏',value:22},{name:'安徽',value:36},{name:'山东',value:78},
+            {name:'河南',value:102},{name:'湖北',value:45},{name:'湖南',value:39},
+            {name:'广东',value:18},{name:'广西',value:52},{name:'海南',value:9},
+            {name:'重庆',value:27},{name:'四川',value:66},{name:'贵州',value:58},
+            {name:'云南',value:71},{name:'西藏',value:12},{name:'陕西',value:63},
+            {name:'甘肃',value:89},{name:'青海',value:47},{name:'宁夏',value:35},
+            {name:'新疆',value:98},{name:'北京',value:0},{name:'天津',value:0},
+            {name:'上海',value:0},{name:'浙江',value:0},{name:'福建',value:0},
+            {name:'江西',value:0},{name:'香港',value:0},{name:'澳门',value:0},
+            {name:'台湾',value:0}
+        ];
+
+        // 燃煤污染型氟中毒 - 各省病区县数量
+        const dataCoal = [
+            {name:'河北',value:0},{name:'山西',value:12},{name:'内蒙古',value:18},
+            {name:'辽宁',value:0},{name:'吉林',value:0},{name:'黑龙江',value:0},
+            {name:'江苏',value:0},{name:'安徽',value:0},{name:'山东',value:0},
+            {name:'河南',value:0},{name:'湖北',value:9},{name:'湖南',value:15},
+            {name:'广东',value:0},{name:'广西',value:21},{name:'海南',value:0},
+            {name:'重庆',value:24},{name:'四川',value:32},{name:'贵州',value:28},
+            {name:'云南',value:22},{name:'西藏',value:0},{name:'陕西',value:0},
+            {name:'甘肃',value:0},{name:'青海',value:0},{name:'宁夏',value:0},
+            {name:'新疆',value:0},{name:'北京',value:0},{name:'天津',value:0},
+            {name:'上海',value:0},{name:'浙江',value:0},{name:'福建',value:0},
+            {name:'江西',value:0},{name:'香港',value:0},{name:'澳门',value:0},
+            {name:'台湾',value:0}
+        ];
+
+        // 全国汇总文本
+        const totalText = {
+            1: '【饮水型】全国病区县：1041个 | 已控制县：953个 | 氟斑牙患者：29.9万人 | 氟骨症患者：6.8万人',
+            2: '【燃煤污染型】全国病区县：171个 | 已控制县：171个 | 氟斑牙患者：6.4万人 | 氟骨症患者：16.3万人'
+        };
+
+        // 3. 渲染地图函数
+        function renderMap(type){
+            let seriesData = type === 1 ? dataDrink : dataCoal;
+            let titleText = type === 1 ? '饮水型地方性氟中毒病区县分布' : '燃煤污染型地方性氟中毒病区县分布';
+            
+            const option = {
+                title: {
+                    text: titleText,
+                    left: 'center',
+                    textStyle: {fontSize: 18}
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}<br/>病区县数量：{c} 个' // 悬浮弹窗内容
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    top: 'bottom',
+                    data: ['病区县数量']
+                },
+                visualMap: {
+                    min: 0,
+                    max: 110,
+                    left: 'left',
+                    bottom: '10%',
+                    text: ['高','低'],
+                    calculable: true,
+                    // 分级配色：浅蓝(无病区)→黄→橙→红(重病区)
+                    inRange: {
+                        color: ['#e6f7ff','#ffe699','#ff9966','#e64340']
+                    }
+                },
+                series: [
+                    {
+                        name: '病区县数量',
+                        type: 'map',
+                        mapType: 'china',
+                        roam: true, // 开启缩放、平移
+                        label: {
+                            show: true // 显示省份名称
+                        },
+                        data: seriesData
+                    }
+                ]
+            };
+            myChart.setOption(option);
+            document.getElementById('totalInfo').innerText = totalText[type];
+        }
+
+        // 4. 初始加载地图
+        renderMap(1);
+
+        // 5. 按钮切换事件
+        document.getElementById('btn1').addEventListener('click',function(){
+            currentType = 1;
+            this.classList.add('active');
+            document.getElementById('btn2').classList.remove('active');
+            renderMap(1);
+        });
+        document.getElementById('btn2').addEventListener('click',function(){
+            currentType = 2;
+            this.classList.add('active');
+            document.getElementById('btn1').classList.remove('active');
+            renderMap(2);
+        });
+
+        // 窗口大小自适应
+        window.addEventListener('resize',function(){
+            myChart.resize();
+        })
+    </script>
+</body>
+</html>
